@@ -17,6 +17,7 @@ public class Metric {
     private int loopCount;
     private double memory;
     private int gcInvoke;
+    private String heapDumpFile;
 
     private static final ThreadLocal<DateFormat> t = new ThreadLocal<DateFormat>() {
         @Override

@@ -2,8 +2,6 @@ package com.theory;
 
 import lombok.extern.slf4j.Slf4j;
 import net.sf.dynamicreports.report.exception.DRException;
-import org.apache.commons.csv.CSVFormat;
-import org.apache.commons.csv.CSVPrinter;
 import org.junit.runner.Description;
 import org.junit.runner.notification.Failure;
 import org.junit.runner.notification.RunNotifier;
@@ -14,8 +12,6 @@ import org.junit.runners.model.Statement;
 
 import java.io.File;
 import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.io.StringWriter;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.List;
@@ -47,9 +43,6 @@ public class MemoryAnalizer extends BlockJUnit4ClassRunner {
             return;
         }
 
-        StringWriter out = new StringWriter();
-        CSVPrinter csvPrinter = createCsvPrinter(out, getDescription(), notifier);
-
         GcPredicate gcPredicate = memoryAnalizerConfig.getGcPredicate();
         Calendar calendar = Calendar.getInstance();
 
@@ -60,14 +53,14 @@ public class MemoryAnalizer extends BlockJUnit4ClassRunner {
             Runtime runtime = Runtime.getRuntime();
             double memorySnapshot = toMb(runtime.totalMemory() - runtime.freeMemory());
 
+            String dumpHeapFile = dumpHeap(description, memoryAnalizerConfig, loopCount);
+
             Metric metric = Metric.builder()
                     .loopCount(loopCount)
                     .memory(memorySnapshot)
                     .timestamp(calendar.getTimeInMillis())
+                    .heapDumpFile(dumpHeapFile)
                     .build();
-
-            String reportPath = memoryAnalizerConfig.getReportPath();
-            HeapDump.dumpHeap(reportPath + File.separator + description.getDisplayName() + "_" + loopCount + ".hprof", true);
 
             if(gcPredicate.doHit(metric)) {
                 log.info("Hitting GC. Current memory {}", memorySnapshot);
@@ -96,6 +89,13 @@ public class MemoryAnalizer extends BlockJUnit4ClassRunner {
         notifier.fireTestFinished(description);
     }
 
+    private String dumpHeap(Description description, MemoryAnalizerConfig memoryAnalizerConfig, int loopCount) {
+        String reportPath = memoryAnalizerConfig.getReportPath();
+        String file = reportPath + File.separator + description.getDisplayName() + "_" + loopCount + ".hprof";
+        HeapDump.dumpHeap(file, true);
+        return file;
+    }
+
     private boolean delay(RunNotifier notifier, Description description, MemoryAnalizerConfig memoryAnalizerConfig) {
         try {
             Thread.sleep(memoryAnalizerConfig.getSnapshotDelayMs());
@@ -119,15 +119,6 @@ public class MemoryAnalizer extends BlockJUnit4ClassRunner {
 
     private double toMb(long memory) {
         return (double)(memory) / (double)(1024 * 1024);
-    }
-
-    private CSVPrinter createCsvPrinter(Appendable appendable, Description description, RunNotifier runNotifier) {
-        try {
-            return CSVFormat.DEFAULT.withHeader("Loop", "Memory").print(appendable);
-        } catch (IOException e) {
-            runNotifier.fireTestFailure(new Failure(description, e));
-            return null;
-        }
     }
 
 }

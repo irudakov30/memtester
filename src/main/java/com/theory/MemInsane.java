@@ -8,17 +8,23 @@ import java.util.concurrent.ForkJoinPool;
 public class MemInsane {
 
     public void doS() {
-        for(int i = 0; i < 10000; i++) {
-            ForkJoinPool pool = new ForkJoinPool();
+        ForkJoinPool pool = new ForkJoinPool();
+
+        for(int i = 0; i < 100; i++) {
             pool.execute(new Runnable() {
                 public void run() {
                     try {
-                        Thread.sleep(1000000);
+                        Thread.sleep(25000);
                     } catch (InterruptedException e) {
                         e.printStackTrace();
                     }
                 }
             });
+            try {
+                Thread.sleep(100);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
         }
     }
 }
