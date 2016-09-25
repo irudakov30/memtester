@@ -24,7 +24,7 @@ public class MethodStarter {
         this.futures = new ArrayList<Future>();
     }
 
-    public void start(final Statement statement , final Description description, final RunNotifier notifier) {
+    public void start(final Statement statement, final Description description, final RunNotifier notifier) throws Exception {
         for (int i = 0; i < threadsCount; i++) {
             Future future = executorService.submit(new Runnable() {
                 public void run() {

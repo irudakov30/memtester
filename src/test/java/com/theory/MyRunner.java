@@ -1,5 +1,6 @@
 package com.theory;
 
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVPrinter;
 import org.junit.Ignore;
@@ -23,6 +24,7 @@ import java.util.concurrent.Future;
 /**
  * Created by irudakov on 24.09.2016.
  */
+@Slf4j
 public class MyRunner extends BlockJUnit4ClassRunner {
 
     private static final int THREADS_COUNT = 5;
@@ -40,6 +42,8 @@ public class MyRunner extends BlockJUnit4ClassRunner {
         Rules rules = method.getAnnotation(Rules.class);
         int threadsCount = rules.threadsCount();
 
+        log.info("Start");
+
         Class<? extends GcPredicate> gcPredicateClass =  rules.hitGc();
         GcPredicate gcPredicate = null;
         try {
@@ -53,7 +57,12 @@ public class MyRunner extends BlockJUnit4ClassRunner {
         notifier.fireTestStarted(description);
 
         MethodStarter methodStarter = new MethodStarter(executor, THREADS_COUNT);
-        methodStarter.start(statement, description, notifier);
+        try {
+            methodStarter.start(statement, description, notifier);
+        } catch (Exception e) {
+            notifier.fireTestFailure(new Failure(description, e));
+            return;
+        }
 
         StringWriter out = new StringWriter();
         CSVPrinter csvPrinter = createCsvPrinter(out, getDescription(), notifier);
@@ -78,7 +87,6 @@ public class MyRunner extends BlockJUnit4ClassRunner {
             }
 
             if(gcPredicate.doHit(memoryAfter)) {
-                System.out.println(">>> Hit GC");
                 System.gc();
             }
         }
