@@ -11,11 +11,10 @@ import org.junit.runners.model.FrameworkMethod;
 import org.junit.runners.model.InitializationError;
 import org.junit.runners.model.Statement;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.StringWriter;
-import java.security.Timestamp;
 import java.util.Calendar;
-import java.util.Date;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -23,9 +22,9 @@ import java.util.concurrent.Executors;
  * Created by irudakov on 24.09.2016.
  */
 @Slf4j
-public class MyRunner extends BlockJUnit4ClassRunner {
+public class MemoryAnalizer extends BlockJUnit4ClassRunner {
 
-    public MyRunner(Class<?> klass) throws InitializationError {
+    public MemoryAnalizer(Class<?> klass) throws InitializationError {
         super(klass);
     }
 
@@ -50,39 +49,51 @@ public class MyRunner extends BlockJUnit4ClassRunner {
         GcPredicate gcPredicate = rulesConfig.getGcPredicate();
         Calendar calendar = Calendar.getInstance();
 
-        int i = 0;
+        int loopCount = 0;
         while (!methodStarter.isComplete()) {
             Runtime runtime = Runtime.getRuntime();
-            double memoryAfter = toMb(runtime.totalMemory() - runtime.freeMemory());
-            String mem = String.valueOf(memoryAfter);
-            i++;
+            double memorySnapshot = toMb(runtime.totalMemory() - runtime.freeMemory());
+            String mem = String.valueOf(memorySnapshot);
 
             Metric metric = Metric.builder()
-                    .loopCount(i)
-                    .memory(memoryAfter)
+                    .loopCount(loopCount)
+                    .memory(memorySnapshot)
                     .timestamp(calendar.getTimeInMillis())
                     .build();
 
             try {
-                csvPrinter.printRecord(i, mem);
+                csvPrinter.printRecord(loopCount, mem);
             } catch (IOException e) {
                 e.printStackTrace();
             }
 
-            try {
-                Thread.sleep(1);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
+            if (!delay(notifier, description, rulesConfig)) {
+                return;
             }
 
             if(gcPredicate.doHit(metric)) {
+                log.info("Hitting GC. Current memory {}", memorySnapshot);
                 System.gc();
             }
+
+            String reportPath = rulesConfig.getReportPath();
+            HeapDump.dumpHeap(reportPath + File.separator + description.getDisplayName() + "_" + loopCount + ".hprof", true);
+
+            loopCount++;
         }
 
-        System.out.println(out.toString());
-
         notifier.fireTestFinished(description);
+    }
+
+    private boolean delay(RunNotifier notifier, Description description, RulesConfig rulesConfig) {
+        try {
+            Thread.sleep(rulesConfig.getSnapshotDelayMs());
+        } catch (InterruptedException e) {
+            notifier.fireTestFailure(new Failure(description, e));
+            Thread.currentThread().interrupt();
+            return false;
+        }
+        return true;
     }
 
     private boolean startTestMethod(RunNotifier notifier, Statement statement, Description description, MethodStarter methodStarter) {

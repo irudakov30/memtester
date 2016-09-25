@@ -41,7 +41,6 @@
             <artifactId>org-netbeans-modules-nbjunit</artifactId>
             <version>RELEASE802</version>
         </dependency>
-
         <dependency>
             <groupId>junit</groupId>
             <artifactId>junit</artifactId>

@@ -1,23 +1,44 @@
 package com.theory;
 
+import com.sun.management.HotSpotDiagnosticMXBean;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import sun.security.action.GetPropertyAction;
 
+import java.io.File;
+import java.io.IOException;
+import java.lang.management.ManagementFactory;
+import java.security.AccessController;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * Created by irudakov on 24.09.2016.
  */
-@RunWith(MyRunner.class)
+@RunWith(MemoryAnalizer.class)
 public class MemTest {
 
     @Test
-    @Rules(threadsCount = 5, hitGc = MyPred.class)
+    @MemoryAnalizerParams(threadsCount = 5, hitGc = MyPred.class)
     public void test() throws InterruptedException {
         for(int i = 0; i < 10; i++) {
             Thread.sleep(500);
         }
         System.out.println("Test");
+    }
+
+    private static final File tmpdir = new File(AccessController
+            .doPrivileged(new GetPropertyAction("java.io.tmpdir")));
+
+    @Test
+    public void test3() throws IOException {
+        String file = tmpdir + File.separator + "123.bin";
+
+        HotSpotDiagnosticMXBean mxBean = ManagementFactory.getPlatformMXBean(HotSpotDiagnosticMXBean.class);
+        mxBean.dumpHeap(file, true);
+
+//        HeapDump.dumpHeap(file, true);
+
+        System.out.println(file);
     }
 
     @Test

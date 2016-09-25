@@ -13,6 +13,8 @@ public class RulesConfig {
     private int threadsCount;
     private GcPredicate gcPredicate;
     private int threadsStartDelay;
+    private int snapshotDelayMs;
+    private String reportPath;
 
     private RulesConfig() {
     }
@@ -20,13 +22,17 @@ public class RulesConfig {
     public static RulesConfig create(FrameworkMethod frameworkMethod) {
         RulesConfig rulesConfig = new RulesConfig();
 
-        Rules rules = frameworkMethod.getAnnotation(Rules.class);
+        MemoryAnalizerParams memoryAnalizerParams = frameworkMethod.getAnnotation(MemoryAnalizerParams.class);
 
-        rulesConfig.threadsCount = rules.threadsCount();
-        rulesConfig.threadsStartDelay = rules.threadsStartDelay();
+        rulesConfig.threadsCount = memoryAnalizerParams.threadsCount();
+        rulesConfig.threadsStartDelay = memoryAnalizerParams.threadsStartDelay();
+        rulesConfig.snapshotDelayMs = memoryAnalizerParams.snapshotDelayMs();
 
-        Class<? extends GcPredicate> gcPredicateClass =  rules.hitGc();
+        Class<? extends GcPredicate> gcPredicateClass =  memoryAnalizerParams.hitGc();
         rulesConfig.gcPredicate = initGcPredicate(gcPredicateClass);
+
+        rulesConfig.reportPath = System.getProperty("reportPath");
+
         return rulesConfig;
     }
 
