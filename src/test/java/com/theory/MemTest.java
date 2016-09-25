@@ -47,7 +47,6 @@ public class MemTest {
                 System.gc();
             }
         }
-
     }
 
     public static String humanReadableByteCount(long bytes, boolean si) {
@@ -59,10 +58,8 @@ public class MemTest {
     }
 
     public static final class MyPred implements GcPredicate {
-
-        public boolean doHit(long memory) {
-            if(memory > 20000000) return true;
-            return false;
+        public boolean doHit(Metric metric) {
+            return metric.getMemory() > 12;
         }
     }
 }

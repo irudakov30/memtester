@@ -13,10 +13,11 @@ import org.junit.runners.model.Statement;
 
 import java.io.IOException;
 import java.io.StringWriter;
-import java.util.List;
+import java.security.Timestamp;
+import java.util.Calendar;
+import java.util.Date;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
 
 /**
  * Created by irudakov on 24.09.2016.
@@ -47,12 +48,20 @@ public class MyRunner extends BlockJUnit4ClassRunner {
         CSVPrinter csvPrinter = createCsvPrinter(out, getDescription(), notifier);
 
         GcPredicate gcPredicate = rulesConfig.getGcPredicate();
+        Calendar calendar = Calendar.getInstance();
+
         int i = 0;
         while (!methodStarter.isComplete()) {
             Runtime runtime = Runtime.getRuntime();
             double memoryAfter = toMb(runtime.totalMemory() - runtime.freeMemory());
             String mem = String.valueOf(memoryAfter);
             i++;
+
+            Metric metric = Metric.builder()
+                    .loopCount(i)
+                    .memory(memoryAfter)
+                    .timestamp(calendar.getTimeInMillis())
+                    .build();
 
             try {
                 csvPrinter.printRecord(i, mem);
@@ -66,9 +75,9 @@ public class MyRunner extends BlockJUnit4ClassRunner {
                 e.printStackTrace();
             }
 
-//            if(gcPredicate.doHit(memoryAfter)) {
-//                System.gc();
-//            }
+            if(gcPredicate.doHit(metric)) {
+                System.gc();
+            }
         }
 
         System.out.println(out.toString());
@@ -91,16 +100,6 @@ public class MyRunner extends BlockJUnit4ClassRunner {
         return usedMemory;
     }
 
-    private boolean isAllComplete(List<Future> futures) {
-        int size = futures.size();
-        int doneCount = 0;
-        for (Future future : futures) {
-            doneCount += future.isDone() ? 1 : 0;
-        }
-
-        return size == doneCount;
-    }
-
     private CSVPrinter createCsvPrinter(Appendable appendable, Description description, RunNotifier runNotifier) {
         try {
             return CSVFormat.DEFAULT.withHeader("Loop", "Memory").print(appendable);
@@ -110,11 +109,4 @@ public class MyRunner extends BlockJUnit4ClassRunner {
         }
     }
 
-    public static String humanReadableByteCount(long bytes, boolean si) {
-        int unit = si ? 1000 : 1024;
-        if (bytes < unit) return bytes + " B";
-        int exp = (int) (Math.log(bytes) / Math.log(unit));
-        String pre = (si ? "kMGTPE" : "KMGTPE").charAt(exp - 1) + (si ? "" : "i");
-        return String.format("%.1f %sB", bytes / Math.pow(unit, exp), pre);
-    }
 }
