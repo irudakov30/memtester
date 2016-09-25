@@ -36,8 +36,9 @@ public class Report {
         TextColumnBuilder loopColumn = col.column("Loop", "loopCount", type.integerType()).setHorizontalTextAlignment(HorizontalTextAlignment.LEFT);
         TextColumnBuilder memoryColumn = col.column("Memory", "memory", type.doubleType()).setHorizontalTextAlignment(HorizontalTextAlignment.LEFT);
         TextColumnBuilder gcInvokedColumn = col.column("GC invoked", "gcInvoke", type.integerType()).setHorizontalTextAlignment(HorizontalTextAlignment.LEFT);
+        TextColumnBuilder heapDumpPath = col.column("Heap dump path", "heapDumpFile", type.stringType()).setHorizontalTextAlignment(HorizontalTextAlignment.LEFT);
 
-        report.columns(loopColumn, memoryColumn, gcInvokedColumn, timeColumn);
+        report.columns(loopColumn, memoryColumn, gcInvokedColumn, timeColumn, heapDumpPath);
 
         report.subtotalsAtSummary(sbt.sum(gcInvokedColumn));
 
