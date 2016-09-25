@@ -5,7 +5,6 @@ import org.junit.runner.Description;
 import org.junit.runner.notification.RunNotifier;
 import org.junit.runners.model.Statement;
 
-import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
@@ -19,9 +18,9 @@ public class MethodStarter {
 
     private final ExecutorService executorService;
     private final List<Future> futures;
-    private final RulesConfig config;
+    private final MemoryAnalizerConfig config;
 
-    public MethodStarter(ExecutorService executorService, RulesConfig config) {
+    public MethodStarter(ExecutorService executorService, MemoryAnalizerConfig config) {
         this.executorService = executorService;
         this.config = config;
         this.futures = new ArrayList<Future>();

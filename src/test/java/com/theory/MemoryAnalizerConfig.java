@@ -9,31 +9,31 @@ import org.junit.runners.model.FrameworkMethod;
  */
 @Slf4j
 @Getter
-public class RulesConfig {
+public class MemoryAnalizerConfig {
     private int threadsCount;
     private GcPredicate gcPredicate;
     private int threadsStartDelay;
     private int snapshotDelayMs;
     private String reportPath;
 
-    private RulesConfig() {
+    private MemoryAnalizerConfig() {
     }
 
-    public static RulesConfig create(FrameworkMethod frameworkMethod) {
-        RulesConfig rulesConfig = new RulesConfig();
+    public static MemoryAnalizerConfig create(FrameworkMethod frameworkMethod) {
+        MemoryAnalizerConfig memoryAnalizerConfig = new MemoryAnalizerConfig();
 
         MemoryAnalizerParams memoryAnalizerParams = frameworkMethod.getAnnotation(MemoryAnalizerParams.class);
 
-        rulesConfig.threadsCount = memoryAnalizerParams.threadsCount();
-        rulesConfig.threadsStartDelay = memoryAnalizerParams.threadsStartDelay();
-        rulesConfig.snapshotDelayMs = memoryAnalizerParams.snapshotDelayMs();
+        memoryAnalizerConfig.threadsCount = memoryAnalizerParams.threadsCount();
+        memoryAnalizerConfig.threadsStartDelay = memoryAnalizerParams.threadsStartDelay();
+        memoryAnalizerConfig.snapshotDelayMs = memoryAnalizerParams.snapshotDelayMs();
 
         Class<? extends GcPredicate> gcPredicateClass =  memoryAnalizerParams.hitGc();
-        rulesConfig.gcPredicate = initGcPredicate(gcPredicateClass);
+        memoryAnalizerConfig.gcPredicate = initGcPredicate(gcPredicateClass);
 
-        rulesConfig.reportPath = System.getProperty("reportPath");
+        memoryAnalizerConfig.reportPath = System.getProperty("reportPath");
 
-        return rulesConfig;
+        return memoryAnalizerConfig;
     }
 
     private static GcPredicate initGcPredicate(Class<? extends GcPredicate> gcPredicateClass) {

@@ -18,7 +18,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public class MemTest {
 
     @Test
-    @MemoryAnalizerParams(threadsCount = 5, hitGc = MyPred.class)
+    @MemoryAnalizerParams(threadsCount = 5, hitGc = MyPred.class, snapshotDelayMs = 100)
     public void test() throws InterruptedException {
         for(int i = 0; i < 10; i++) {
             Thread.sleep(500);
