@@ -3,7 +3,6 @@ package com.theory;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVPrinter;
-import org.junit.Ignore;
 import org.junit.runner.Description;
 import org.junit.runner.notification.Failure;
 import org.junit.runner.notification.RunNotifier;
@@ -14,9 +13,7 @@ import org.junit.runners.model.Statement;
 
 import java.io.IOException;
 import java.io.StringWriter;
-import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -27,9 +24,6 @@ import java.util.concurrent.Future;
 @Slf4j
 public class MyRunner extends BlockJUnit4ClassRunner {
 
-    private static final int THREADS_COUNT = 5;
-    private static final ExecutorService executor = Executors.newFixedThreadPool(THREADS_COUNT);
-
     public MyRunner(Class<?> klass) throws InitializationError {
         super(klass);
     }
@@ -38,39 +32,25 @@ public class MyRunner extends BlockJUnit4ClassRunner {
     protected void runChild(final FrameworkMethod method, final RunNotifier notifier) {
         final Statement statement = super.methodBlock(method);
         final Description description = this.describeChild(method);
-
-        Rules rules = method.getAnnotation(Rules.class);
-        int threadsCount = rules.threadsCount();
-
-        log.info("Start");
-
-        Class<? extends GcPredicate> gcPredicateClass =  rules.hitGc();
-        GcPredicate gcPredicate = null;
-        try {
-            gcPredicate = gcPredicateClass.newInstance();
-        } catch (InstantiationException e) {
-            e.printStackTrace();
-        } catch (IllegalAccessException e) {
-            e.printStackTrace();
-        }
+        RulesConfig rulesConfig = RulesConfig.create(method);
 
         notifier.fireTestStarted(description);
 
-        MethodStarter methodStarter = new MethodStarter(executor, THREADS_COUNT);
-        try {
-            methodStarter.start(statement, description, notifier);
-        } catch (Exception e) {
-            notifier.fireTestFailure(new Failure(description, e));
+        ExecutorService executor = Executors.newFixedThreadPool(rulesConfig.getThreadsCount());
+        MethodStarter methodStarter = new MethodStarter(executor, rulesConfig);
+
+        if (!startTestMethod(notifier, statement, description, methodStarter)) {
             return;
         }
 
         StringWriter out = new StringWriter();
         CSVPrinter csvPrinter = createCsvPrinter(out, getDescription(), notifier);
 
+        GcPredicate gcPredicate = rulesConfig.getGcPredicate();
         int i = 0;
         while (!methodStarter.isComplete()) {
             Runtime runtime = Runtime.getRuntime();
-            long memoryAfter = runtime.totalMemory() - runtime.freeMemory();
+            double memoryAfter = toMb(runtime.totalMemory() - runtime.freeMemory());
             String mem = String.valueOf(memoryAfter);
             i++;
 
@@ -86,14 +66,29 @@ public class MyRunner extends BlockJUnit4ClassRunner {
                 e.printStackTrace();
             }
 
-            if(gcPredicate.doHit(memoryAfter)) {
-                System.gc();
-            }
+//            if(gcPredicate.doHit(memoryAfter)) {
+//                System.gc();
+//            }
         }
 
         System.out.println(out.toString());
 
         notifier.fireTestFinished(description);
+    }
+
+    private boolean startTestMethod(RunNotifier notifier, Statement statement, Description description, MethodStarter methodStarter) {
+        try {
+            methodStarter.start(statement, description, notifier);
+        } catch (Exception e) {
+            notifier.fireTestFailure(new Failure(description, e));
+            return false;
+        }
+        return true;
+    }
+
+    private double toMb(long memory) {
+        double usedMemory = (double)(memory) / (double)(1024 * 1024);
+        return usedMemory;
     }
 
     private boolean isAllComplete(List<Future> futures) {

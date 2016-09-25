@@ -16,16 +16,16 @@ public class MethodStarter {
 
     private final ExecutorService executorService;
     private final List<Future> futures;
-    private final int threadsCount;
+    private final RulesConfig config;
 
-    public MethodStarter(ExecutorService executorService, int threadsCount) {
+    public MethodStarter(ExecutorService executorService, RulesConfig config) {
         this.executorService = executorService;
-        this.threadsCount = threadsCount;
+        this.config = config;
         this.futures = new ArrayList<Future>();
     }
 
     public void start(final Statement statement, final Description description, final RunNotifier notifier) throws Exception {
-        for (int i = 0; i < threadsCount; i++) {
+        for (int i = 0; i < config.getThreadsCount(); i++) {
             Future future = executorService.submit(new Runnable() {
                 public void run() {
                     try {
@@ -37,16 +37,20 @@ public class MethodStarter {
                 }
             });
             futures.add(future);
+
+            int delay = config.getThreadsStartDelay();
+            if(delay > 0) {
+                Thread.sleep(delay);
+            }
         }
     }
 
     public boolean isComplete() {
-        int size = futures.size();
         int doneCount = 0;
         for (Future future : futures) {
             doneCount += future.isDone() ? 1 : 0;
         }
 
-        return size == doneCount;
+        return config.getThreadsCount() == doneCount;
     }
 }

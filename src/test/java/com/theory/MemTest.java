@@ -48,13 +48,6 @@ public class MemTest {
             }
         }
 
-//        long memoryAfter = runtime.totalMemory() - runtime.freeMemory();
-//
-//        System.out.println(">>>> Before: " + humanReadableByteCount(memoryBefore, true));
-//        System.out.println(">>>> After: " + humanReadableByteCount(memoryAfter, true));
-//
-//        System.gc();
-//        System.out.println(runtime.totalMemory() - runtime.freeMemory());
     }
 
     public static String humanReadableByteCount(long bytes, boolean si) {
