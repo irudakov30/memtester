@@ -22,11 +22,8 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
-import static java.util.stream.Collectors.groupingBy;
-import static java.util.stream.Collectors.toList;
-import static java.util.stream.Collectors.toSet;
+import static java.util.stream.Collectors.*;
 import static net.sf.dynamicreports.report.builder.DynamicReports.*;
 
 /**
@@ -38,14 +35,19 @@ public class Report {
     private List<Metric> metrics;
     private MemoryAnalizerConfig memoryAnalizerConfig;
 
-    private Map<String, TextColumnBuilder> memoryColumns = new HashMap<String, TextColumnBuilder>();
+    private Map<String, TextColumnBuilder> memoryColumns = new HashMap<>();
+
+    private static final String LOOP_COLUMN = "loop";
+
+    public String getReportPath() {
+        return MemoryAnalizerConfig.reportPath + File.separator + "index.html";
+    }
 
     public void generate() throws DRException, FileNotFoundException {
         JasperReportBuilder report = createReport("", metrics);
 
-        String reportPath = memoryAnalizerConfig.getReportPath();
-//        concatenatedReport().concatenate(reports).toHtml(new FileOutputStream(new File(reportPath + File.separator + "index.html")));
-        report.toHtml(new FileOutputStream(new File(reportPath + File.separator + "index.html")));
+        String reportPath = MemoryAnalizerConfig.reportPath;
+        report.toHtml(new FileOutputStream(new File(getReportPath())));
     }
 
     private JasperReportBuilder createReport(String testDisplayName, List<Metric> metrics) {
@@ -56,31 +58,16 @@ public class Report {
         JRDataSource jrDataSource = createDataSource(columnNames, metrics);
         report.setDataSource(jrDataSource);
 
-//                .setHorizontalTextAlignment(HorizontalTextAlignment.LEFT)).collect(Collectors.toList());
-//        TextColumnBuilder testNameColumn = col.column("Test name", "testName", type.stringType()).setHorizontalTextAlignment(HorizontalTextAlignment.LEFT);
-//        TextColumnBuilder timeColumn = col.column("Time", "time", type.stringType()).setHorizontalTextAlignment(HorizontalTextAlignment.LEFT);
+        TextColumnBuilder loopColumn = col.column(LOOP_COLUMN, LOOP_COLUMN, type.integerType()).setHorizontalTextAlignment(HorizontalTextAlignment.LEFT);
 
-        TextColumnBuilder loopColumn = col.column("Loop", "loop", type.integerType()).setHorizontalTextAlignment(HorizontalTextAlignment.LEFT);//
-        List<TextColumnBuilder> memoryColumns = columnNames.subList(1, columnNames.size()).stream().map(n -> col.column(n, n, type.doubleType()).setHorizontalTextAlignment(HorizontalTextAlignment.LEFT)).collect(toList());
+        List<TextColumnBuilder> memoryColumns = columnNames.subList(1, columnNames.size() - 1).stream().map(n -> col.column(n, n, type.doubleType())
+                .setHorizontalTextAlignment(HorizontalTextAlignment.LEFT)).collect(toList());
 
-//
-//        TextColumnBuilder gcInvokedColumn = col.column("GC invoked", "gcInvoke", type.integerType()).setHorizontalTextAlignment(HorizontalTextAlignment.LEFT);
-//        TextColumnBuilder heapDumpPath = col.column("Heap dump path", "heapDumpFile", type.stringType()).setHorizontalTextAlignment(HorizontalTextAlignment.LEFT);
+        TextColumnBuilder heapDumpPath = col.column("Heap dump path", "heapDumpFile", type.stringType()).setHorizontalTextAlignment(HorizontalTextAlignment.LEFT);
 
-
-        report.columns(loopColumn).columns(memoryColumns.toArray(new ColumnBuilder[memoryColumns.size()]));
-
-//        report.subtotalsAtSummary(sbt.sum(gcInvokedColumn));
-
-//        GroupBuilder groupBuilder = Groups.group(testNameColumn);
-//        report.groupBy(groupBuilder);
+        report.columns(loopColumn).columns(memoryColumns.toArray(new ColumnBuilder[memoryColumns.size()])).columns(heapDumpPath);
 
         applyStyles(report);
-
-//        LineChartBuilder lineChartBuilder = cht.xyLineChart().setTitle("Memory dynamic chart")
-//                .setCategory(loopColumn)
-//                .addSerie(cht.serie(memoryColumn));
-
 
         List<XyChartSerieBuilder> series = new ArrayList<>(memoryColumns.size());
         for(TextColumnBuilder col: memoryColumns) {
@@ -135,10 +122,9 @@ public class Report {
         StyleBuilder columnTitleStyle = stl.style(boldCenteredStyle)
                 .setBorder(stl.pen1Point())
                 .setBackgroundColor(Color.LIGHT_GRAY);
-        report
-                .setColumnTitleStyle(columnTitleStyle)
-                .highlightDetailEvenRows()
-                .title(cmp.text("Getting started").setStyle(boldCenteredStyle))
-                .pageFooter(cmp.pageXofY().setStyle(boldCenteredStyle));
+        report.setColumnTitleStyle(columnTitleStyle)
+              .highlightDetailEvenRows()
+              .title(cmp.text("Getting started").setStyle(boldCenteredStyle))
+              .pageFooter(cmp.pageXofY().setStyle(boldCenteredStyle));
     }
 }

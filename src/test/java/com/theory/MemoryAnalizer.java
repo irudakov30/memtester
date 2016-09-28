@@ -1,7 +1,6 @@
 package com.theory;
 
 import lombok.extern.slf4j.Slf4j;
-import net.sf.dynamicreports.report.exception.DRException;
 import org.junit.runner.Description;
 import org.junit.runner.notification.Failure;
 import org.junit.runner.notification.RunNotifier;
@@ -11,7 +10,6 @@ import org.junit.runners.model.InitializationError;
 import org.junit.runners.model.Statement;
 
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.List;
@@ -42,30 +40,26 @@ public class MemoryAnalizer extends BlockJUnit4ClassRunner {
         testsProcessed++;
 
         try {
-            runChild_(memoryAnalizerConfig, statement, description, method, notifier);
+            notifier.fireTestStarted(description);
+            runChild_(memoryAnalizerConfig, statement, description);
+            notifier.fireTestFinished(description);
+
+            if(testsProcessed == testsAmount) {
+                Report report = Report.builder().memoryAnalizerConfig(memoryAnalizerConfig).metrics(metrics).build();
+                log.info("About to generate a report {}", report.getReportPath());
+                report.generate();
+            }
+
         } catch (Exception e) {
             notifier.fireTestFailure(new Failure(description, e));
         }
-
-        if(testsProcessed == testsAmount) {
-            Report report = Report.builder().memoryAnalizerConfig(memoryAnalizerConfig).metrics(metrics).build();
-            try {
-                report.generate();
-            } catch (DRException e) {
-                e.printStackTrace();
-            } catch (FileNotFoundException e) {
-                e.printStackTrace();
-            }
-        }
     }
 
-    private void runChild_(MemoryAnalizerConfig memoryAnalizerConfig , Statement statement, Description description, FrameworkMethod method, RunNotifier notifier) throws Exception {
-        notifier.fireTestStarted(description);
-
+    private void runChild_(MemoryAnalizerConfig memoryAnalizerConfig , Statement statement, Description description) throws Exception {
         ExecutorService executor = Executors.newFixedThreadPool(memoryAnalizerConfig.getThreadsCount());
         MethodStarter methodStarter = new MethodStarter(executor, memoryAnalizerConfig);
 
-        methodStarter.start(statement, description, notifier);
+        methodStarter.start(statement);
 
         GcPredicate gcPredicate = memoryAnalizerConfig.getGcPredicate();
         Calendar calendar = Calendar.getInstance();
@@ -77,38 +71,35 @@ public class MemoryAnalizer extends BlockJUnit4ClassRunner {
             Runtime runtime = Runtime.getRuntime();
             double memorySnapshot = toMb(runtime.totalMemory() - runtime.freeMemory());
 
-            String dumpHeapFile = dumpHeap(description, memoryAnalizerConfig, loopCount);
+            String dumpHeapFile = dumpHeap(description, loopCount);
+
+            log.debug("Heap dump save {}", dumpHeapFile);
 
             Metric metric = Metric.builder()
                     .testName(description.getMethodName())
                     .loopCount(loopCount)
                     .memory(memorySnapshot)
                     .timestamp(calendar.getTimeInMillis())
-                    .heapDumpFile(dumpHeapFile)
                     .build();
 
-            if(gcPredicate.doHit(metric)) {
-                log.info("Hitting GC. Current memory {}", memorySnapshot);
-                System.gc();
-                metric.setGcInvoke(1);
+            if(gcPredicate.validate(metric)) {
+                log.debug("Hitting GC. Current memory {}", memorySnapshot);
             }
 
             metricList.add(metric);
 
             loopCount++;
 
-            if (!delay(notifier, description, memoryAnalizerConfig)) {
-                return;
-            }
+            Thread.sleep(memoryAnalizerConfig.getSnapshotDelayMs());
         }
 
         metrics.addAll(metricList);
 
-        notifier.fireTestFinished(description);
+        log.info("GC was invoked {} times", metricList.stream().mapToInt(Metric::getGcInvoke).sum());
     }
 
-    private String dumpHeap(Description description, MemoryAnalizerConfig memoryAnalizerConfig, int loopCount) {
-        String reportPath = memoryAnalizerConfig.getReportPath();
+    private String dumpHeap(Description description, int loopCount) {
+        String reportPath = MemoryAnalizerConfig.reportPath;
         String folderPath = reportPath + File.separator + description.getMethodName();
 
         boolean isMkDir = new File(folderPath).mkdirs();
@@ -116,17 +107,6 @@ public class MemoryAnalizer extends BlockJUnit4ClassRunner {
         String file = reportPath + File.separator + description.getMethodName() + File.separator + loopCount + ".hprof";
         HeapDump.dumpHeap(file, true);
         return file;
-    }
-
-    private boolean delay(RunNotifier notifier, Description description, MemoryAnalizerConfig memoryAnalizerConfig) {
-        try {
-            Thread.sleep(memoryAnalizerConfig.getSnapshotDelayMs());
-        } catch (InterruptedException e) {
-            notifier.fireTestFailure(new Failure(description, e));
-            Thread.currentThread().interrupt();
-            return false;
-        }
-        return true;
     }
 
     private double toMb(long memory) {

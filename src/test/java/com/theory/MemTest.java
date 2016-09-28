@@ -23,7 +23,7 @@ public class MemTest {
         memInsane.doS2();
     }
 
-    public static final class MyPred implements GcPredicate {
+    public static final class MyPred extends GcPredicate {
         public boolean doHit(Metric metric) {
             return metric.getMemory() > 12;
         }

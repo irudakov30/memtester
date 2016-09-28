@@ -4,6 +4,11 @@ import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.runners.model.FrameworkMethod;
 
+import java.io.File;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+
 /**
  * Created by irudakov on 25.09.2016.
  */
@@ -14,7 +19,14 @@ public class MemoryAnalizerConfig {
     private GcPredicate gcPredicate;
     private int threadsStartDelay;
     private int snapshotDelayMs;
-    private String reportPath;
+
+    public static String reportPath;
+
+    private static DateFormat dateFormat = new SimpleDateFormat("YYYYmmdd_HHMMss");
+
+    static {
+        reportPath = System.getProperty("reportPath") + File.separator + dateFormat.format(new Date());
+    }
 
     private MemoryAnalizerConfig() {
     }
@@ -30,8 +42,6 @@ public class MemoryAnalizerConfig {
 
         Class<? extends GcPredicate> gcPredicateClass =  memoryAnalizerParams.hitGc();
         memoryAnalizerConfig.gcPredicate = initGcPredicate(gcPredicateClass);
-
-        memoryAnalizerConfig.reportPath = System.getProperty("reportPath");
 
         return memoryAnalizerConfig;
     }
