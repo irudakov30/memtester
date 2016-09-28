@@ -1,4 +1,4 @@
-package com.theory;
+package com.theory.junit.runner;
 
 import lombok.Builder;
 import lombok.Data;

@@ -1,4 +1,4 @@
-package com.theory;
+package com.theory.junit.runner;
 
 /**
  * Created by irudakov on 25.09.2016.

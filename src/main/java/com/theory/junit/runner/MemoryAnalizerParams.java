@@ -1,4 +1,4 @@
-package com.theory;
+package com.theory.junit.runner;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;

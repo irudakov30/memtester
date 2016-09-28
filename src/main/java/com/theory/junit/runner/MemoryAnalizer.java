@@ -1,4 +1,4 @@
-package com.theory;
+package com.theory.junit.runner;
 
 import lombok.extern.slf4j.Slf4j;
 import org.junit.runner.Description;
