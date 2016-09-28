@@ -1,6 +1,7 @@
 package com.theory;
 
 import lombok.Builder;
+import net.sf.dynamicreports.jasper.builder.JasperConcatenatedReportBuilder;
 import net.sf.dynamicreports.jasper.builder.JasperReportBuilder;
 import net.sf.dynamicreports.report.builder.DynamicReports;
 import net.sf.dynamicreports.report.builder.chart.XyChartSerieBuilder;
@@ -46,10 +47,22 @@ public class Report {
     public void generate(String reportName) throws DRException, FileNotFoundException {
         JasperReportBuilder report = createReport(reportName, metrics);
 
+        DRDataSource dataSource = new DRDataSource("Test name", "Gc hits");
+        metrics.stream().collect(groupingBy(Metric::getTestName)).entrySet().forEach(e -> dataSource.add(e.getKey(), e.getValue().stream().mapToInt(Metric::getGcInvoke).sum()));
+
+        JasperReportBuilder report2 = DynamicReports.report();
+        report2.setDataSource(dataSource);
+        TextColumnBuilder testNameColumn = col.column("Test name", "Test name", type.stringType()).setHorizontalTextAlignment(HorizontalTextAlignment.LEFT);
+        TextColumnBuilder gcHitsColumn = col.column("Gc hits", "Gc hits", type.integerType()).setHorizontalTextAlignment(HorizontalTextAlignment.LEFT);
+
+        report2.columns(testNameColumn, gcHitsColumn);
+
+        JasperConcatenatedReportBuilder concatenatedReport = concatenatedReport().concatenate(report, report2);
+
         if(MemoryAnalizerConfig.reportType.equalsIgnoreCase("pdf")) {
-            report.toPdf(new FileOutputStream(new File(getReportPath())));
+            concatenatedReport.toPdf(new FileOutputStream(new File(getReportPath())));
         } else {
-            report.toHtml(new FileOutputStream(new File(getReportPath())));
+            concatenatedReport.toHtml(new FileOutputStream(new File(getReportPath())));
         }
     }
 
