@@ -11,9 +11,16 @@ public class MemTest {
 
     @Test
     @MemoryAnalizerParams(threadsCount = 5, hitGc = MyPred.class, snapshotDelayMs = 100)
-    public void test() throws InterruptedException {
+    public void newThreadPoolTest() throws InterruptedException {
         MemInsane memInsane = new MemInsane();
         memInsane.doS();
+    }
+
+    @Test
+    @MemoryAnalizerParams(threadsCount = 5, hitGc = MyPred.class, snapshotDelayMs = 100)
+    public void commonThreadPoolTest() throws InterruptedException {
+        MemInsane memInsane = new MemInsane();
+        memInsane.doS2();
     }
 
     public static final class MyPred implements GcPredicate {

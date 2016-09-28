@@ -13,6 +13,7 @@ import java.util.Date;
 @Builder
 @Data
 public class Metric {
+    private String testName;
     private long timestamp;
     private int loopCount;
     private double memory;

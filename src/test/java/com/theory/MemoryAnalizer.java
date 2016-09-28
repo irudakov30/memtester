@@ -24,8 +24,13 @@ import java.util.concurrent.Executors;
 @Slf4j
 public class MemoryAnalizer extends BlockJUnit4ClassRunner {
 
+    private static final List<Metric> metrics = new ArrayList<>();
+    private final int testsAmount;
+    private int testsProcessed;
+
     public MemoryAnalizer(Class<?> klass) throws InitializationError {
         super(klass);
+        this.testsAmount = getChildren().size();
     }
 
     @Override
@@ -34,19 +39,38 @@ public class MemoryAnalizer extends BlockJUnit4ClassRunner {
         final Description description = this.describeChild(method);
         MemoryAnalizerConfig memoryAnalizerConfig = MemoryAnalizerConfig.create(method);
 
+        testsProcessed++;
+
+        try {
+            runChild_(memoryAnalizerConfig, statement, description, method, notifier);
+        } catch (Exception e) {
+            notifier.fireTestFailure(new Failure(description, e));
+        }
+
+        if(testsProcessed == testsAmount) {
+            Report report = Report.builder().memoryAnalizerConfig(memoryAnalizerConfig).metrics(metrics).build();
+            try {
+                report.generate();
+            } catch (DRException e) {
+                e.printStackTrace();
+            } catch (FileNotFoundException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+    private void runChild_(MemoryAnalizerConfig memoryAnalizerConfig , Statement statement, Description description, FrameworkMethod method, RunNotifier notifier) throws Exception {
         notifier.fireTestStarted(description);
 
         ExecutorService executor = Executors.newFixedThreadPool(memoryAnalizerConfig.getThreadsCount());
         MethodStarter methodStarter = new MethodStarter(executor, memoryAnalizerConfig);
 
-        if (!startTestMethod(notifier, statement, description, methodStarter)) {
-            return;
-        }
+        methodStarter.start(statement, description, notifier);
 
         GcPredicate gcPredicate = memoryAnalizerConfig.getGcPredicate();
         Calendar calendar = Calendar.getInstance();
 
-        List<Metric> metricList = new ArrayList<Metric>();
+        List<Metric> metricList = new ArrayList<>();
 
         int loopCount = 0;
         while (!methodStarter.isComplete()) {
@@ -56,6 +80,7 @@ public class MemoryAnalizer extends BlockJUnit4ClassRunner {
             String dumpHeapFile = dumpHeap(description, memoryAnalizerConfig, loopCount);
 
             Metric metric = Metric.builder()
+                    .testName(description.getMethodName())
                     .loopCount(loopCount)
                     .memory(memorySnapshot)
                     .timestamp(calendar.getTimeInMillis())
@@ -77,21 +102,18 @@ public class MemoryAnalizer extends BlockJUnit4ClassRunner {
             }
         }
 
-        Report report = Report.builder().memoryAnalizerConfig(memoryAnalizerConfig).metrics(metricList).build();
-        try {
-            report.generate();
-        } catch (DRException e) {
-            e.printStackTrace();
-        } catch (FileNotFoundException e) {
-            e.printStackTrace();
-        }
+        metrics.addAll(metricList);
 
         notifier.fireTestFinished(description);
     }
 
     private String dumpHeap(Description description, MemoryAnalizerConfig memoryAnalizerConfig, int loopCount) {
         String reportPath = memoryAnalizerConfig.getReportPath();
-        String file = reportPath + File.separator + description.getDisplayName() + "_" + loopCount + ".hprof";
+        String folderPath = reportPath + File.separator + description.getMethodName();
+
+        boolean isMkDir = new File(folderPath).mkdirs();
+
+        String file = reportPath + File.separator + description.getMethodName() + File.separator + loopCount + ".hprof";
         HeapDump.dumpHeap(file, true);
         return file;
     }
@@ -102,16 +124,6 @@ public class MemoryAnalizer extends BlockJUnit4ClassRunner {
         } catch (InterruptedException e) {
             notifier.fireTestFailure(new Failure(description, e));
             Thread.currentThread().interrupt();
-            return false;
-        }
-        return true;
-    }
-
-    private boolean startTestMethod(RunNotifier notifier, Statement statement, Description description, MethodStarter methodStarter) {
-        try {
-            methodStarter.start(statement, description, notifier);
-        } catch (Exception e) {
-            notifier.fireTestFailure(new Failure(description, e));
             return false;
         }
         return true;

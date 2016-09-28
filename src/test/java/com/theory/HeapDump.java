@@ -1,10 +1,13 @@
 package com.theory;
 
+import lombok.extern.slf4j.Slf4j;
+
 import javax.management.MBeanServer;
 import java.lang.management.ManagementFactory;
 import java.lang.reflect.Method;
 
 @SuppressWarnings("restriction")
+@Slf4j
 public class HeapDump {
     private static final String HOTSPOT_BEAN_NAME = "com.sun.management:type=HotSpotDiagnostic";
 
@@ -12,6 +15,8 @@ public class HeapDump {
     private static volatile Object hotspotMBean;
 
     public static void dumpHeap(String fileName, boolean live) {
+        log.debug("Dumping heap {}, {}", fileName, live);
+
         // initialize hotspot diagnostic MBean
         initHotspotMBean();
         try {
