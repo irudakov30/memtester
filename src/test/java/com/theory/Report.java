@@ -40,17 +40,20 @@ public class Report {
     private static final String LOOP_COLUMN = "loop";
 
     public String getReportPath() {
-        return MemoryAnalizerConfig.reportPath + File.separator + "index.html";
+        return MemoryAnalizerConfig.reportPath + File.separator + "report." + MemoryAnalizerConfig.reportType;
     }
 
-    public void generate() throws DRException, FileNotFoundException {
-        JasperReportBuilder report = createReport("", metrics);
+    public void generate(String reportName) throws DRException, FileNotFoundException {
+        JasperReportBuilder report = createReport(reportName, metrics);
 
-        String reportPath = MemoryAnalizerConfig.reportPath;
-        report.toHtml(new FileOutputStream(new File(getReportPath())));
+        if(MemoryAnalizerConfig.reportType.equalsIgnoreCase("pdf")) {
+            report.toPdf(new FileOutputStream(new File(getReportPath())));
+        } else {
+            report.toHtml(new FileOutputStream(new File(getReportPath())));
+        }
     }
 
-    private JasperReportBuilder createReport(String testDisplayName, List<Metric> metrics) {
+    private JasperReportBuilder createReport(String reportName, List<Metric> metrics) {
         JasperReportBuilder report = DynamicReports.report();
 
         List<String> columnNames = prepareColumnNames(metrics);
@@ -60,14 +63,12 @@ public class Report {
 
         TextColumnBuilder loopColumn = col.column(LOOP_COLUMN, LOOP_COLUMN, type.integerType()).setHorizontalTextAlignment(HorizontalTextAlignment.LEFT);
 
-        List<TextColumnBuilder> memoryColumns = columnNames.subList(1, columnNames.size() - 1).stream().map(n -> col.column(n, n, type.doubleType())
+        List<TextColumnBuilder> memoryColumns = columnNames.subList(1, columnNames.size()).stream().map(n -> col.column(n, n, type.doubleType())
                 .setHorizontalTextAlignment(HorizontalTextAlignment.LEFT)).collect(toList());
 
-        TextColumnBuilder heapDumpPath = col.column("Heap dump path", "heapDumpFile", type.stringType()).setHorizontalTextAlignment(HorizontalTextAlignment.LEFT);
+        report.columns(loopColumn).columns(memoryColumns.toArray(new ColumnBuilder[memoryColumns.size()]));
 
-        report.columns(loopColumn).columns(memoryColumns.toArray(new ColumnBuilder[memoryColumns.size()])).columns(heapDumpPath);
-
-        applyStyles(report);
+        applyStyles(report, reportName);
 
         List<XyChartSerieBuilder> series = new ArrayList<>(memoryColumns.size());
         for(TextColumnBuilder col: memoryColumns) {
@@ -75,13 +76,13 @@ public class Report {
         }
 
         ComponentBuilder lineChartBuilder = cht.xyLineChart()
-                .setTitle("XY line chart")
+                .setTitle("Memory consumption chart")
                 .setXValue(loopColumn)
                 .series((XyChartSerieBuilder[]) series.toArray(new XyChartSerieBuilder[series.size()]))
                 .setXAxisFormat(
-                        cht.axisFormat().setLabel("X"))
+                        cht.axisFormat().setLabel(LOOP_COLUMN))
                 .setYAxisFormat(
-                        cht.axisFormat().setLabel("Y"));
+                        cht.axisFormat().setLabel("Memory (Mb)"));
 
         report.summary(lineChartBuilder);
         return report;
@@ -109,22 +110,27 @@ public class Report {
 
     private List<String> prepareColumnNames(List<Metric> metrics) {
         List<String> columnNames = new ArrayList<>();
-        columnNames.add("loop"); //X column
+        columnNames.add(LOOP_COLUMN); //X column
         columnNames.addAll(metrics.stream().map(Metric::getTestName).collect(toSet()));
         return columnNames;
     }
 
 
-    private void applyStyles(JasperReportBuilder report) {
+    private void applyStyles(JasperReportBuilder report, String reportName) {
         StyleBuilder boldStyle = stl.style().bold();
-        StyleBuilder boldCenteredStyle = stl.style(boldStyle).setHorizontalAlignment(HorizontalAlignment.CENTER);
+
+        StyleBuilder boldCenteredStyle = stl.style(boldStyle).setHorizontalAlignment(HorizontalAlignment.CENTER).setFont(stl.font().setFontSize(18));
 
         StyleBuilder columnTitleStyle = stl.style(boldCenteredStyle)
                 .setBorder(stl.pen1Point())
                 .setBackgroundColor(Color.LIGHT_GRAY);
         report.setColumnTitleStyle(columnTitleStyle)
               .highlightDetailEvenRows()
-              .title(cmp.text("Getting started").setStyle(boldCenteredStyle))
+              .title(cmp.text(reportName).setStyle(boldCenteredStyle))
               .pageFooter(cmp.pageXofY().setStyle(boldCenteredStyle));
+
+        report.setTextStyle(stl.style().setFont(stl.font().setFontSize(16)));
+
+        report.setChartStyle(stl.style().setFont(stl.font().setFontSize(14)));
     }
 }

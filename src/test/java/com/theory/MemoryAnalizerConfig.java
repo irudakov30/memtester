@@ -21,11 +21,14 @@ public class MemoryAnalizerConfig {
     private int snapshotDelayMs;
 
     public static String reportPath;
+    public static String reportType;
 
     private static DateFormat dateFormat = new SimpleDateFormat("YYYYmmdd_HHMMss");
 
     static {
         reportPath = System.getProperty("reportPath") + File.separator + dateFormat.format(new Date());
+        String type= System.getProperty("reportType");
+        reportType = type != null ? type : "html";
     }
 
     private MemoryAnalizerConfig() {

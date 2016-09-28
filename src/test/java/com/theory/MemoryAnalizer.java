@@ -47,7 +47,8 @@ public class MemoryAnalizer extends BlockJUnit4ClassRunner {
             if(testsProcessed == testsAmount) {
                 Report report = Report.builder().memoryAnalizerConfig(memoryAnalizerConfig).metrics(metrics).build();
                 log.info("About to generate a report {}", report.getReportPath());
-                report.generate();
+
+                report.generate("Memory test report " + getTestClass());
             }
 
         } catch (Exception e) {
