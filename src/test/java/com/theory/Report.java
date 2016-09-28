@@ -46,24 +46,31 @@ public class Report {
 
     public void generate(String reportName) throws DRException, FileNotFoundException {
         JasperReportBuilder report = createReport(reportName, metrics);
+        JasperReportBuilder generalMetricsReport = createGeneralMetricsReport();
 
-        DRDataSource dataSource = new DRDataSource("Test name", "Gc hits");
-        metrics.stream().collect(groupingBy(Metric::getTestName)).entrySet().forEach(e -> dataSource.add(e.getKey(), e.getValue().stream().mapToInt(Metric::getGcInvoke).sum()));
-
-        JasperReportBuilder report2 = DynamicReports.report();
-        report2.setDataSource(dataSource);
-        TextColumnBuilder testNameColumn = col.column("Test name", "Test name", type.stringType()).setHorizontalTextAlignment(HorizontalTextAlignment.LEFT);
-        TextColumnBuilder gcHitsColumn = col.column("Gc hits", "Gc hits", type.integerType()).setHorizontalTextAlignment(HorizontalTextAlignment.LEFT);
-
-        report2.columns(testNameColumn, gcHitsColumn);
-
-        JasperConcatenatedReportBuilder concatenatedReport = concatenatedReport().concatenate(report, report2);
+        JasperConcatenatedReportBuilder concatenatedReport = concatenatedReport().concatenate(report, generalMetricsReport);
 
         if(MemoryAnalizerConfig.reportType.equalsIgnoreCase("pdf")) {
             concatenatedReport.toPdf(new FileOutputStream(new File(getReportPath())));
         } else {
             concatenatedReport.toHtml(new FileOutputStream(new File(getReportPath())));
         }
+    }
+
+    private JasperReportBuilder createGeneralMetricsReport() {
+        JasperReportBuilder generalMetricsReport = DynamicReports.report();
+
+        DRDataSource dataSource = new DRDataSource("Test name", "Gc hits");
+        metrics.stream().collect(groupingBy(Metric::getTestName)).entrySet().forEach(e -> dataSource.add(e.getKey(), e.getValue().stream().mapToInt(Metric::getGcInvoke).sum()));
+
+        generalMetricsReport.setDataSource(dataSource);
+        TextColumnBuilder testNameColumn = col.column("Test name", "Test name", type.stringType()).setHorizontalTextAlignment(HorizontalTextAlignment.CENTER);
+        TextColumnBuilder gcHitsColumn = col.column("Gc hits", "Gc hits", type.integerType()).setHorizontalTextAlignment(HorizontalTextAlignment.CENTER);
+
+        applyStyles(generalMetricsReport, "General metrics report");
+
+        generalMetricsReport.columns(testNameColumn, gcHitsColumn);
+        return generalMetricsReport;
     }
 
     private JasperReportBuilder createReport(String reportName, List<Metric> metrics) {
@@ -74,10 +81,10 @@ public class Report {
         JRDataSource jrDataSource = createDataSource(columnNames, metrics);
         report.setDataSource(jrDataSource);
 
-        TextColumnBuilder loopColumn = col.column(LOOP_COLUMN, LOOP_COLUMN, type.integerType()).setHorizontalTextAlignment(HorizontalTextAlignment.LEFT);
+        TextColumnBuilder loopColumn = col.column(LOOP_COLUMN, LOOP_COLUMN, type.integerType()).setHorizontalTextAlignment(HorizontalTextAlignment.CENTER);
 
         List<TextColumnBuilder> memoryColumns = columnNames.subList(1, columnNames.size()).stream().map(n -> col.column(n, n, type.doubleType())
-                .setHorizontalTextAlignment(HorizontalTextAlignment.LEFT)).collect(toList());
+                .setHorizontalTextAlignment(HorizontalTextAlignment.CENTER)).collect(toList());
 
         report.columns(loopColumn).columns(memoryColumns.toArray(new ColumnBuilder[memoryColumns.size()]));
 
