@@ -1,4 +1,4 @@
-package com.theory.junit.runner;
+package com.github.memtester.junit.runner;
 
 import lombok.extern.slf4j.Slf4j;
 import org.junit.runners.model.Statement;

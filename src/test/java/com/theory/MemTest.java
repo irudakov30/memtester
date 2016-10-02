@@ -1,9 +1,9 @@
 package com.theory;
 
-import com.theory.junit.runner.GcPredicate;
-import com.theory.junit.runner.MemoryAnalizer;
-import com.theory.junit.runner.MemoryAnalizerParams;
-import com.theory.junit.runner.Metric;
+import com.github.memtester.junit.runner.GcPredicate;
+import com.github.memtester.junit.runner.MemoryAnalizer;
+import com.github.memtester.junit.runner.MemoryAnalizerParams;
+import com.github.memtester.junit.runner.Metric;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 

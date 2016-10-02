@@ -1,7 +1,5 @@
-package com.theory.junit.runner;
+package com.github.memtester.junit.runner;
 
-import com.theory.junit.runner.MemoryAnalizerConfig;
-import com.theory.junit.runner.Metric;
 import lombok.Builder;
 import net.sf.dynamicreports.jasper.builder.JasperConcatenatedReportBuilder;
 import net.sf.dynamicreports.jasper.builder.JasperReportBuilder;

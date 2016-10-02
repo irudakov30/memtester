@@ -1,4 +1,4 @@
-package com.theory.junit.runner;
+package com.github.memtester.junit.runner;
 
 import lombok.Builder;
 import lombok.Data;

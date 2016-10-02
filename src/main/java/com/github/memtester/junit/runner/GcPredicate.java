@@ -1,4 +1,4 @@
-package com.theory.junit.runner;
+package com.github.memtester.junit.runner;
 
 /**
  * Created by irudakov on 25.09.2016.
