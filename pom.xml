@@ -23,8 +23,17 @@
         </license>
     </licenses>
 
+    <developers>
+        <developer>
+            <name>Ilya Rudakov</name>
+            <email>irudakov30@gmail.com</email>
+        </developer>
+    </developers>
+
     <scm>
-        <url>https://github.com/irudakov30/memtester.git</url>
+        <connection>scm:git:git://github.com/irudakov30/memtester.git</connection>
+        <developerConnection>scm:git:ssh://github.com:irudakov30/memtester.git</developerConnection>
+        <url>https://github.com/irudakov30/memtester</url>
     </scm>
 
     <build>
